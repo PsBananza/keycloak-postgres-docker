@@ -1,0 +1,48 @@
+version: '3.9'
+services:
+  postgres:
+    image: postgres:16.2
+    container_name: postgres
+    hostname: postgres
+    restart: unless-stopped
+    ports:
+      - ${POSTGRES_PORT}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    volumes:
+      - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
+      - ./init-db:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -q -d $$POSTGRES_DB -U $$POSTGRES_USER"]
+      interval: 5s
+      timeout: 5s
+
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:latest
+    container_name: keycloak
+    hostname: keycloak
+    restart: unless-stopped
+    user: root
+    ports:
+      - ${KEYCLOAK_PORT}
+    environment:
+      DB_VENDOR: postgres
+      DB_ADDR: postgres
+      DB_USER: ${KEYCLOAK_DB_USER}
+      DB_DATABASE: ${KEYCLOAK_DB_NAME}
+      DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KEYCLOAK_ADMIN: ${KEYCLOAK_ADMIN}
+      KEYCLOAK_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+    command:
+      - start-dev
+      - --db=postgres
+      - --db-url=jdbc:postgresql://postgres/keycloak
+      - --db-username=${POSTGRES_USER}
+      - --db-password=${POSTGRES_PASSWORD}
+    depends_on:
+      - postgres
+    volumes:
+      - ${KEYCLOAK_DATA_PATH}:/opt/keycloak/data
